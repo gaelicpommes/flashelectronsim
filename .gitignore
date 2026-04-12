@@ -1,0 +1,15 @@
+build/
+logs/
+results/
+*.o
+*.out
+*.exe
+*.root
+*.csv
+*.dat
+__pycache__/
+.ipynb_checkpoints/
+
+
+
+
