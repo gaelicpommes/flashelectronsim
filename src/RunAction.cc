@@ -5,6 +5,8 @@
 #include "G4ios.hh"
 
 void RunAction::BeginOfRunAction(const G4Run*) {
+  if (!IsMaster()) return;
+
   Analysis::Instance()->Configure(
       /*rMax_mm*/ 60.0, /*nR*/ 120,
       /*eMax_MeV*/ 12.0, /*nE*/ 240,
@@ -13,6 +15,8 @@ void RunAction::BeginOfRunAction(const G4Run*) {
 }
 
 void RunAction::EndOfRunAction(const G4Run* run) {
+  if (!IsMaster()) return;
+
   // Append runID so outputs don't overwrite each time
   const int runID = run ? run->GetRunID() : 0;
   const std::string out = fPrefix + "_run" + std::to_string(runID);
