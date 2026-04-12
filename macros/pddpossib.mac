@@ -15,6 +15,9 @@
 #/control/execute ../macros/sourcepossib.mac
 /control/execute SOURCE_MAC
 
+# Applicator ID selection in cm (allowed: 10, 5, 2)
+/flash/setApplicatorIDcm APPLICATOR_CM
+
 # Init
 /run/initialize
 
