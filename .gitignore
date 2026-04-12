@@ -1,15 +1,28 @@
+# Build and runtime
 build/
 logs/
 results/
+
+# Compiled files
 *.o
 *.out
 *.exe
+
+# Simulation output
 *.root
 *.csv
 *.dat
+
+# Python
 __pycache__/
 .ipynb_checkpoints/
 
+# Archives (optional but fine)
+*.tar
+*.tar.*
+*.zip
+*.tgz
 
-
-
+# Logs
+*.log
+*.log.*
