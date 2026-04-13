@@ -9,6 +9,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
+#include <cmath>
 
 namespace {
   void SetSolidVis(G4LogicalVolume* lv, const G4Colour& c) {
@@ -19,7 +20,7 @@ namespace {
   }
 }
 
-BeamlineHandles BeamlineGeometry::Build10cmBeamline(G4LogicalVolume* worldLV)
+BeamlineHandles BeamlineGeometry::BuildBeamline(G4LogicalVolume* worldLV, G4double applicatorIDmm)
 {
   BeamlineHandles h;
 
@@ -135,15 +136,39 @@ BeamlineHandles BeamlineGeometry::Build10cmBeamline(G4LogicalVolume* worldLV)
   }
 
   // -------------------------
-  // Applicator 10 cm (PMMA): ID=100 mm, OD=116 mm, L=428 mm
-  // Applicator 5cm (PMMA): ID=50 mm, OD=66 mm, L=428 mm
-  // Applicator 2cm (PMMA): ID=20 mm, OD=36 mm, L=428 mm
-  // Placed flush to collimator downstream face
+  // Applicator (PMMA), placed flush to collimator downstream face.
+  // Supported:
+  //  - ID=100 mm, OD=116 mm, L=428 mm
+  //  - ID=50  mm, OD=66  mm, L=428 mm
+  //  - ID=20  mm, OD=36  mm, L=428 mm
   // -------------------------
   {
-    const auto appRin   = 25.0*mm;      // ID 100 mm-> bore radius 50 mm   
-    const auto appRout  = 33.0*mm;      // OD 116 mm-> bore radius 58 mm
-    const auto appL     = 428.0*mm;
+    G4double appID = applicatorIDmm;
+    G4double appOD = 116.0*mm;
+    G4double appL  = 428.0*mm;
+    G4String appName = "Applicator10cm";
+    G4String appLVName = "Applicator10cmLV";
+    G4String appPVName = "Applicator10cmPV";
+
+    if (std::abs(applicatorIDmm - 50.0*mm) < 1e-6*mm) {
+      appID = 50.0*mm;
+      appOD = 66.0*mm;
+      appName = "Applicator5cm";
+      appLVName = "Applicator5cmLV";
+      appPVName = "Applicator5cmPV";
+    } else if (std::abs(applicatorIDmm - 20.0*mm) < 1e-6*mm) {
+      appID = 20.0*mm;
+      appOD = 36.0*mm;
+      appName = "Applicator2cm";
+      appLVName = "Applicator2cmLV";
+      appPVName = "Applicator2cmPV";
+    } else {
+      appID = 100.0*mm;
+      appOD = 116.0*mm;
+    }
+
+    const auto appRin   = appID/2.0;
+    const auto appRout  = appOD/2.0;
     const auto appHalfZ = appL/2;
 
     // Small tolerance to avoid coincident surfaces (prevents overlap warnings)
@@ -154,14 +179,14 @@ BeamlineHandles BeamlineGeometry::Build10cmBeamline(G4LogicalVolume* worldLV)
     const auto zAppCenter = h.zAppEntrance + appHalfZ;
 
     // PMMA tube (hollow by definition)
-    auto appSolid = new G4Tubs("Applicator10cm",
+    auto appSolid = new G4Tubs(appName,
                                appRin, appRout, appHalfZ,
                                0.*deg, 360.*deg);
 
-    auto appLV = new G4LogicalVolume(appSolid, plexiglass, "Applicator10cmLV");
+    auto appLV = new G4LogicalVolume(appSolid, plexiglass, appLVName);
 
     new G4PVPlacement(nullptr, G4ThreeVector(0,0,zAppCenter), appLV,
-                      "Applicator10cmPV", worldLV, false, 0, true);
+                      appPVName, worldLV, false, 0, true);
 
     SetSolidVis(appLV, G4Colour::Blue());
 
@@ -215,6 +240,14 @@ BeamlineHandles BeamlineGeometry::Build10cmBeamline(G4LogicalVolume* worldLV)
   //}
     h.applicatorLV = appLV;
     h.zAppExit     = h.zAppEntrance + appL;
+    h.appInnerR    = appRin;
+    h.appOuterR    = appRout;
+    h.appLength    = appL;
+
+    G4cout << "Applicator ID/OD/L = "
+           << (2.0*appRin)/mm << " / "
+           << (2.0*appRout)/mm << " / "
+           << appL/mm << " mm" << G4endl;
   }
 
   return h;

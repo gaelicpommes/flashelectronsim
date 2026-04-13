@@ -11,12 +11,20 @@
 /event/verbose 0
 /tracking/verbose 0
 
-# Source (SLURM will substitute SOURCE_MAC)
-#/control/execute ../macros/sourcepossib.mac
-/control/execute SOURCE_MAC
+# Applicator ID selection in cm (allowed: 10, 5, 2)
+# You can also set: export FLASH_APPLICATOR_CM=10|5|2
+# Optional (requires binary with /flash messenger support):
+# /flash/setApplicatorIDcm 10
+# Optional batch replacement token:
+# /flash/setApplicatorIDcm APPLICATOR_CM
 
 # Init
 /run/initialize
+
+# Source (GPS commands require actions to be initialized)
+/control/execute ../macros/sourcepossib.mac
+# Optional batch replacement token:
+# /control/execute SOURCE_MAC
 
 # -------------------------
 # (A) PDD mesh (1D along Z)
@@ -38,8 +46,10 @@
 /score/quantity/doseDeposit exitDose
 /score/quantity/cellFlux    exitfluence
 /score/close
-# Run
-/run/beamOn BEAMON
+# Run (default runnable line)
+/run/beamOn 10000
+# Optional batch replacement token:
+# /run/beamOn BEAMON
 
 # Dump all outputs
 /score/dumpQuantityToFile pdd1D  pddDose   PDD_TXT
