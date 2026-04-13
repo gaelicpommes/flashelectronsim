@@ -15,6 +15,9 @@ export FLASH_APPLICATOR_CM=10   # or 5, or 2
 ./FlashElectronSim macros/pdd.mac
 ```
 
+Note: GPS source macros (for example `conv9source.mac`) must be executed **after**
+`/run/initialize`, otherwise `/gps/...` commands are not available yet.
+
 The geometry uses these fixed specs:
 
 - 10 cm applicator: ID=100 mm, OD=116 mm, L=428 mm

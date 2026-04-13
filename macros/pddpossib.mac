@@ -11,11 +11,6 @@
 /event/verbose 0
 /tracking/verbose 0
 
-# Source (default runnable line)
-/control/execute ../macros/sourcepossib.mac
-# Optional batch replacement token:
-# /control/execute SOURCE_MAC
-
 # Applicator ID selection in cm (allowed: 10, 5, 2)
 # You can also set: export FLASH_APPLICATOR_CM=10|5|2
 # Optional (requires binary with /flash messenger support):
@@ -23,11 +18,13 @@
 # Optional batch replacement token:
 # /flash/setApplicatorIDcm APPLICATOR_CM
 
-# Applicator ID selection in cm (allowed: 10, 5, 2)
-/flash/setApplicatorIDcm APPLICATOR_CM
-
 # Init
 /run/initialize
+
+# Source (GPS commands require actions to be initialized)
+/control/execute ../macros/sourcepossib.mac
+# Optional batch replacement token:
+# /control/execute SOURCE_MAC
 
 # -------------------------
 # (A) PDD mesh (1D along Z)
