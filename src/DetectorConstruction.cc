@@ -12,6 +12,43 @@
 #include "G4SystemOfUnits.hh"
 #include "G4VisAttributes.hh"
 #include "G4ios.hh"
+#include "G4GenericMessenger.hh"
+#include <cmath>
+#include <cstdlib>
+
+DetectorConstruction::DetectorConstruction()
+{
+  fMessenger = std::make_unique<G4GenericMessenger>(this, "/flash/", "Flash electron beam setup");
+
+  auto& appCmd = fMessenger->DeclareMethod("setApplicatorIDcm",
+                                           &DetectorConstruction::SetApplicatorIDcm,
+                                           "Select applicator ID in cm (allowed: 10, 5, 2).");
+  appCmd.SetParameterName("idCm", false);
+  appCmd.SetStates(G4State_PreInit);
+
+  // Optional environment-based selector for batch jobs:
+  //   export FLASH_APPLICATOR_CM=10|5|2
+  if (const char* appEnv = std::getenv("FLASH_APPLICATOR_CM")) {
+    const auto idCm = std::atof(appEnv);
+    SetApplicatorIDcm(idCm);
+    G4cout << "[DetectorConstruction] FLASH_APPLICATOR_CM=" << appEnv << G4endl;
+  }
+}
+
+void DetectorConstruction::SetApplicatorIDcm(G4double idCm)
+{
+  const auto idMm = idCm*cm;
+  if (std::abs(idMm - 100.0*mm) < 1e-6*mm ||
+      std::abs(idMm - 50.0*mm)  < 1e-6*mm ||
+      std::abs(idMm - 20.0*mm)  < 1e-6*mm) {
+    fApplicatorIDmm = idMm;
+    return;
+  }
+
+  G4cout << "[DetectorConstruction] Unsupported applicator ID=" << idCm
+         << " cm. Using default 10 cm." << G4endl;
+  fApplicatorIDmm = 100.0*mm;
+}
 
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
@@ -27,8 +64,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
   logicWorld->SetVisAttributes(G4VisAttributes::GetInvisible());
 
-  // -------- Beamline (10 cm applicator) --------
-  const auto beam = BeamlineGeometry::Build10cmBeamline(logicWorld);
+  // -------- Beamline (selectable applicator) --------
+  const auto beam = BeamlineGeometry::BuildBeamline(logicWorld, fApplicatorIDmm);
 
   // -------- Exit plane (just after applicator exit) --------
   // Place 0.5 mm downstream so it does not overlap the water phantom front face.
@@ -37,7 +74,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   // NOTE: ExitPlaneGeometry defaults are in mm, so pass plain numbers (not *mm).
   //ExitPlaneGeometry::BuildExitPlane(logicWorld, exitPlaneZ, 60.0, 0.1);
   //ExitPlaneGeometry::BuildExitPlane(logicWorld, exitPlaneZ, 49.0*mm, 0.1*mm);
-  ExitPlaneGeometry::BuildExitPlane(logicWorld, exitPlaneZ, 59.0*mm, 0.1*mm);
+  ExitPlaneGeometry::BuildExitPlane(logicWorld, exitPlaneZ, beam.appOuterR + 1.0*mm, 0.1*mm);
 
   // -------- Water phantom --------
   // Your measurement: applicator exit → water surface = 0 mm (flush).
