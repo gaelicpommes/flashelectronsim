@@ -28,11 +28,11 @@ srun --pty bash -l
 srun --jobid=50014688 --pty bash -l (change the jobid)
 hostname
 to start jupyter:
-salloc --time=10:00:00 --cpus-per-task=2 --mem=4G
+salloc --time=10:00:00 --cpus-per-task=1 --mem=4G
 module purge
 module load Python/3.12.3-GCCcore-13.3.0
 source ~/venvs/flash_py312/bin/activate
-jupyter lab --no-browser --ip=0.0.0.0 --port=8888
+ex
 
 
 unset SLURM_MEM_PER_CPU
@@ -52,6 +52,9 @@ nano ~/.bashrc
 sbatch run_pdd.slurm
 
 squeue -u vsc11383
+
+cd /scratch/brussel/113/vsc11383/projects/third_sim/FlashElectronSim/build
+./FlashElectronSim macros/pdd.mac
 
 ./FlashElectronSim
 

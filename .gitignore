@@ -1,6 +1,11 @@
 # Build and runtime
 build/
+*.out
+*.err
 logs/
+*.out
+*.err
+EOF
 results/
 
 # Compiled files
@@ -26,3 +31,7 @@ __pycache__/
 # Logs
 *.log
 *.log.*
+build/
+logs/
+*.out
+*.err

@@ -12,7 +12,8 @@
 /tracking/verbose 0
 
 # Source
-/control/execute ../macros/conv9source.mac
+#/control/execute ../macros/conv9source.mac
+/control/execute macros/conv9source.mac
 
 # Applicator ID selection in cm (allowed: 10, 5, 2)
 /flash/setApplicatorIDcm 10
@@ -24,21 +25,21 @@
 # (A) PDD mesh (1D along Z)
 # -------------------------
 /score/create/boxMesh pdd1D
-/score/mesh/boxSize 50 50 40 mm      # => full 100×100 mm², depth 80 mm
-/score/mesh/nBin    1   1   160        # 0.5 mm bins
-/score/mesh/translate/xyz 0 0 544.9 mm  # phantomFrontZ + 40 mm
-/score/quantity/doseDeposit dose
+/score/mesh/boxSize 10 10 40 mm
+/score/mesh/nBin    1 1 160
+/score/mesh/translate/xyz 0 0 544.9 mm
+/score/quantity/doseDeposit pddDose
 /score/close
 
 # -------------------------
 # (B) Exit plane 2D mesh (water surface slab)
 # -------------------------
 /score/create/boxMesh exit2D
-/score/mesh/boxSize 80 80 0.25 mm      # 100×100 mm, 0.5 mm thick
-/score/mesh/nBin    80 80 1          # 100mm/200 = 0.5mm pixels
-/score/mesh/translate/xyz 0 0 504.85 mm  # phantomFrontZ + 0.25 mm
-/score/quantity/doseDeposit dose
-/score/quantity/cellFlux    fluence
+/score/mesh/boxSize 60 60 0.25 mm  
+/score/mesh/nBin    120 120 1   
+/score/mesh/translate/xyz 0 0 504.85 mm
+/score/quantity/doseDeposit exitDose
+/score/quantity/cellFlux    exitfluence
 /score/close
 
 # Run
