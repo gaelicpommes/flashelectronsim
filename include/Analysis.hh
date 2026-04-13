@@ -31,7 +31,9 @@ private:
   double fEmax=12.0; int fNE=120;
   double fThmax=30.0; int fNTh=60;
 
-  std::vector<long long> hR, hE, hTh;
+  std::vector<long long> hR = std::vector<long long>(60,0);
+  std::vector<long long> hE = std::vector<long long>(120,0);
+  std::vector<long long> hTh = std::vector<long long>(60,0);
 
   int BinIndex(double x, double xmax, int n) const;
 };

@@ -18,3 +18,8 @@ void ActionInitialization::Build() const
   // SetUserAction(new EventAction());
   // SetUserAction(new SteppingAction());
 }
+
+void ActionInitialization::BuildForMaster() const
+{
+  SetUserAction(new RunAction());
+}

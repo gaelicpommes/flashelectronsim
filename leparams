@@ -1,0 +1,51 @@
+# -------------------------
+# (A) PDD mesh (central-axis dose to water)
+# -------------------------
+/score/create/boxMesh pdd1D
+/score/mesh/boxSize 0.5 0.5 40 mm
+/score/mesh/nBin    1 1 160
+/score/mesh/translate/xyz 0 0 544.9 mm
+/score/quantity/doseDeposit pddDose
+/score/close
+
+if run time is fine, then for 2cm
+/score/mesh/boxSize 0.25 0.25 40 mm
+/score/mesh/nBin    1 1 160
+
+
+
+# -------------------------
+# 10 cm applicator profile mesh
+# -------------------------
+/score/create/boxMesh prof2D_10cm
+/score/mesh/boxSize 60 60 0.25 mm
+/score/mesh/nBin    120 120 1
+/score/mesh/translate/xyz 0 0 ZDEPTH mm
+/score/quantity/doseDeposit profDose
+/score/quantity/cellFlux    proffluence
+/score/close
+
+
+# -------------------------
+# 5 cm applicator profile mesh
+# -------------------------
+/score/create/boxMesh prof2D_5cm
+/score/mesh/boxSize 30 30 0.25 mm
+/score/mesh/nBin    120 120 1
+/score/mesh/translate/xyz 0 0 ZDEPTH mm
+/score/quantity/doseDeposit profDose
+/score/quantity/cellFlux    proffluence
+/score/close
+
+
+
+# -------------------------
+# 2 cm applicator profile mesh
+# -------------------------
+/score/create/boxMesh prof2D_2cm
+/score/mesh/boxSize 15 15 0.25 mm
+/score/mesh/nBin    120 120 1
+/score/mesh/translate/xyz 0 0 ZDEPTH mm
+/score/quantity/doseDeposit profDose
+/score/quantity/cellFlux    proffluence
+/score/close
