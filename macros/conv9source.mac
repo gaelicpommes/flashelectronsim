@@ -5,7 +5,7 @@
 
 /gps/ene/type Gauss
 /gps/ene/mono 9.85 MeV
-/gps/ene/sigma 1 MeV
+/gps/ene/sigma 2 MeV
 
 /gps/pos/type Beam
 /gps/pos/centre 0 0 0 mm
