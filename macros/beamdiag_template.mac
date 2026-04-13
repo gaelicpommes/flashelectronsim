@@ -30,7 +30,7 @@
 # (A) PDD mesh (1D along Z)
 # -------------------------
 /score/create/boxMesh pdd1D
-/score/mesh/boxSize 50 50 40 mm
+/score/mesh/boxSize 10 10 40 mm
 /score/mesh/nBin    1 1 160
 /score/mesh/translate/xyz 0 0 544.9 mm
 /score/quantity/doseDeposit pddDose
@@ -40,8 +40,8 @@
 # (B) Exit plane 2D mesh (water surface slab)
 # -------------------------
 /score/create/boxMesh exit2D
-/score/mesh/boxSize 80 80 0.25 mm  #+/-80mm(160x160mm)
-/score/mesh/nBin    80 80 1   # 120 mm / 60 = 2 mm pixels
+/score/mesh/boxSize 60 60 0.25 mm  
+/score/mesh/nBin    120 120 1   
 /score/mesh/translate/xyz 0 0 504.85 mm
 /score/quantity/doseDeposit exitDose
 /score/quantity/cellFlux    exitfluence

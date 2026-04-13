@@ -1,6 +1,11 @@
 # Build and runtime
 build/
+*.out
+*.err
 logs/
+*.out
+*.err
+EOF
 results/
 
 # Compiled files
