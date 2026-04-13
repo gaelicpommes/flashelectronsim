@@ -25,6 +25,9 @@
 # Optional batch replacement token:
 # /flash/setApplicatorIDcm APPLICATOR_CM
 
+# Applicator ID selection in cm (allowed: 10, 5, 2)
+/flash/setApplicatorIDcm APPLICATOR_CM
+
 # Init
 /run/initialize
 
