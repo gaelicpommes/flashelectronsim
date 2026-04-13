@@ -18,6 +18,13 @@
 # Optional batch replacement token:
 # /flash/setApplicatorIDcm APPLICATOR_CM
 
+# Applicator ID selection in cm (allowed: 10, 5, 2)
+# You can also set: export FLASH_APPLICATOR_CM=10|5|2
+# Optional (requires binary with /flash messenger support):
+# /flash/setApplicatorIDcm 10
+# Optional batch replacement token:
+# /flash/setApplicatorIDcm APPLICATOR_CM
+
 # Init
 /run/initialize
 
