@@ -1,1 +1,42 @@
 # flashelectronsim
+
+## Applicator selection (10 cm / 5 cm / 2 cm)
+
+You can choose applicator inner diameter from a macro before `/run/initialize`:
+
+```tcl
+/flash/setApplicatorIDcm 10   # allowed: 10, 5, 2
+```
+
+For batch jobs, you can also set it without editing macros:
+
+```bash
+export FLASH_APPLICATOR_CM=10   # or 5, or 2
+./FlashElectronSim macros/pdd.mac
+```
+
+Note: GPS source macros (for example `conv9source.mac`) must be executed **after**
+`/run/initialize`, otherwise `/gps/...` commands are not available yet.
+
+The geometry uses these fixed specs:
+
+- 10 cm applicator: ID=100 mm, OD=116 mm, L=428 mm
+- 5 cm applicator:  ID=50 mm,  OD=66 mm,  L=428 mm
+- 2 cm applicator:  ID=20 mm,  OD=36 mm,  L=428 mm
+
+`macros/beamdiag_template.mac`, `macros/pdd.mac`, and `macros/pddpossib.mac`
+are directly runnable with safe defaults (default source/default beamOn), and include
+optional replacement token comments for batch scripts (`SOURCE_MAC`, `APPLICATOR_CM`,
+`BEAMON`).
+
+## Multithreading (Geant4 MT)
+
+`main.cc` now uses Geant4's default run manager type, so MT is enabled automatically
+when your Geant4 installation is built with multithreading support.
+
+You can set threads by either:
+
+- environment variable: `G4FORCENUMBEROFTHREADS=<N>`
+- command line: `./FlashElectronSim <macro.mac> <N>`
+
+If both are provided, command-line `<N>` is used.
