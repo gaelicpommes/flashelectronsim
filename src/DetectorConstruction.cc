@@ -14,6 +14,7 @@
 #include "G4ios.hh"
 #include "G4GenericMessenger.hh"
 #include <cmath>
+#include <cstdlib>
 
 DetectorConstruction::DetectorConstruction()
 {
@@ -24,6 +25,14 @@ DetectorConstruction::DetectorConstruction()
                                            "Select applicator ID in cm (allowed: 10, 5, 2).");
   appCmd.SetParameterName("idCm", false);
   appCmd.SetStates(G4State_PreInit);
+
+  // Optional environment-based selector for batch jobs:
+  //   export FLASH_APPLICATOR_CM=10|5|2
+  if (const char* appEnv = std::getenv("FLASH_APPLICATOR_CM")) {
+    const auto idCm = std::atof(appEnv);
+    SetApplicatorIDcm(idCm);
+    G4cout << "[DetectorConstruction] FLASH_APPLICATOR_CM=" << appEnv << G4endl;
+  }
 }
 
 void DetectorConstruction::SetApplicatorIDcm(G4double idCm)

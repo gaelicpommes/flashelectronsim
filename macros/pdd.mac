@@ -12,11 +12,12 @@
 /tracking/verbose 0
 
 # Source
-#/control/execute ../macros/conv9source.mac
-/control/execute macros/conv9source.mac
+/control/execute ../macros/conv9source.mac
 
 # Applicator ID selection in cm (allowed: 10, 5, 2)
-/flash/setApplicatorIDcm 10
+# You can also set: export FLASH_APPLICATOR_CM=10|5|2
+# Optional (requires binary with /flash messenger support):
+# /flash/setApplicatorIDcm 10
 
 # Init
 /run/initialize

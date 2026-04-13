@@ -15,7 +15,11 @@
 /control/execute ../macros/sourcepossib.mac
 
 # Applicator ID selection in cm (allowed: 10, 5, 2)
-/flash/setApplicatorIDcm APPLICATOR_CM
+# You can also set: export FLASH_APPLICATOR_CM=10|5|2
+# Optional (requires binary with /flash messenger support):
+# /flash/setApplicatorIDcm 10
+# Optional batch replacement token:
+# /flash/setApplicatorIDcm APPLICATOR_CM
 
 # Init
 /run/initialize
@@ -41,8 +45,10 @@
 /score/quantity/cellFlux    exitfluence
 /score/close
 
-# Run
-/run/beamOn BEAMON
+# Run (default runnable line)
+/run/beamOn 10000
+# Optional batch replacement token:
+# /run/beamOn BEAMON
 
 # Dump all outputs
 /score/dumpQuantityToFile pdd1D  pddDose   PDD_TXT

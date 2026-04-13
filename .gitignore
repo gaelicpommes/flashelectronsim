@@ -31,7 +31,3 @@ __pycache__/
 # Logs
 *.log
 *.log.*
-build/
-logs/
-*.out
-*.err
