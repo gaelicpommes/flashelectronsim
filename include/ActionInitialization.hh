@@ -8,4 +8,5 @@ public:
   ~ActionInitialization() override = default;
 
   void Build() const override;
+  void BuildForMaster() const override;
 };
