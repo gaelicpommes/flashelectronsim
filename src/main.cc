@@ -12,6 +12,7 @@
 #include "ActionInitialization.hh"
 #include "G4ScoringManager.hh"
 #include "G4String.hh"
+#include "G4ios.hh"
 #include <algorithm>
 #include <cstdlib>
 #if defined(G4MULTITHREADED)
@@ -61,6 +62,14 @@ int main(int argc, char** argv)
     uiManager->ApplyCommand("/control/execute " + G4String(argv[1]));
   } else {
     auto* ui = new G4UIExecutive(argc, argv);
+
+    // No macro argument means the user wants an interactive visualization session.
+    // Preload the standard viewer and source so the Qt/OpenGL GUI appears with
+    // geometry already drawn, while still leaving the command prompt open.
+    uiManager->ApplyCommand("/control/execute macros/vis.mac");
+    uiManager->ApplyCommand("/control/execute macros/source.mac");
+    G4cout << "[FlashElectronSim] Interactive GUI ready. Example command: /run/beamOn 10" << G4endl;
+
     ui->SessionStart();
     delete ui;
   }
