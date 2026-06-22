@@ -17,6 +17,7 @@ add_executable(FlashElectronSim ${sources} ${headers})
 
 # Include path
 target_include_directories(FlashElectronSim PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_compile_definitions(FlashElectronSim PRIVATE PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
 # Link Geant4
 target_link_libraries(FlashElectronSim ${Geant4_LIBRARIES})
@@ -32,3 +33,11 @@ foreach(_file ${MACRO_FILES})
 endforeach()
 
 
+
+# ---- Copy TOPAS CAD STL files into the build directory ----
+file(GLOB STL_FILES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.stl" "${PROJECT_SOURCE_DIR}/*.STL")
+
+foreach(_file ${STL_FILES})
+  get_filename_component(_fname ${_file} NAME)
+  configure_file(${_file} ${PROJECT_BINARY_DIR}/${_fname} COPYONLY)
+endforeach()

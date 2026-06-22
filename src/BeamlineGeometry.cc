@@ -1,254 +1,278 @@
 // src/BeamlineGeometry.cc
 #include "BeamlineGeometry.hh"
 
-#include "G4NistManager.hh"
-#include "G4Tubs.hh"
-#include "G4SubtractionSolid.hh"
-#include "G4LogicalVolume.hh"
-#include "G4PVPlacement.hh"
-#include "G4SystemOfUnits.hh"
-#include "G4VisAttributes.hh"
 #include "G4Colour.hh"
-#include <cmath>
+#include "G4LogicalVolume.hh"
+#include "G4NistManager.hh"
+#include "G4PVPlacement.hh"
+#include "G4RotationMatrix.hh"
+#include "G4SystemOfUnits.hh"
+#include "G4TessellatedSolid.hh"
+#include "G4TriangularFacet.hh"
+#include "G4VisAttributes.hh"
+#include "G4ios.hh"
+#include "G4Exception.hh"
+
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace {
+  struct Triangle {
+    G4ThreeVector a;
+    G4ThreeVector b;
+    G4ThreeVector c;
+  };
+
+  struct Bounds {
+    G4ThreeVector min{
+      std::numeric_limits<G4double>::max(),
+      std::numeric_limits<G4double>::max(),
+      std::numeric_limits<G4double>::max()
+    };
+    G4ThreeVector max{
+      -std::numeric_limits<G4double>::max(),
+      -std::numeric_limits<G4double>::max(),
+      -std::numeric_limits<G4double>::max()
+    };
+
+    void Include(const G4ThreeVector& p) {
+      min.setX(std::min(min.x(), p.x()));
+      min.setY(std::min(min.y(), p.y()));
+      min.setZ(std::min(min.z(), p.z()));
+      max.setX(std::max(max.x(), p.x()));
+      max.setY(std::max(max.y(), p.y()));
+      max.setZ(std::max(max.z(), p.z()));
+    }
+  };
+
+  G4Colour TopasOrange() {
+    return G4Colour(1.0, 0.5, 0.0);
+  }
+
   void SetSolidVis(G4LogicalVolume* lv, const G4Colour& c) {
     auto vis = new G4VisAttributes(c);
     vis->SetForceSolid(true);
     lv->SetVisAttributes(vis);
-    
+  }
+
+  std::filesystem::path ResolveSTLPath(const std::string& filename) {
+    const std::array<std::filesystem::path, 5> candidates = {
+      std::filesystem::path(filename),
+      std::filesystem::path("../") / filename,
+      std::filesystem::path("../../") / filename,
+#ifdef PROJECT_SOURCE_DIR
+      std::filesystem::path(PROJECT_SOURCE_DIR) / filename,
+      std::filesystem::path(PROJECT_SOURCE_DIR) / "Input_Files" / filename
+#else
+      std::filesystem::path("Input_Files") / filename,
+      std::filesystem::path("../Input_Files") / filename
+#endif
+    };
+
+    for (const auto& p : candidates) {
+      if (std::filesystem::exists(p)) {
+        return p;
+      }
+    }
+
+    G4ExceptionDescription msg;
+    msg << "Could not find STL file '" << filename << "'. Searched current/build/source directories.";
+    G4Exception("BeamlineGeometry::ResolveSTLPath", "FlashElectronSim001", FatalException, msg);
+    return filename;
+  }
+
+  bool LooksLikeAsciiSTL(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    std::array<char, 512> buffer{};
+    in.read(buffer.data(), buffer.size());
+    const auto n = in.gcount();
+    std::string header(buffer.data(), static_cast<std::size_t>(n));
+    auto first = header.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos || header.compare(first, 5, "solid") != 0) {
+      return false;
+    }
+    return header.find("facet") != std::string::npos || header.find("vertex") != std::string::npos;
+  }
+
+  std::vector<Triangle> ReadBinarySTL(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+      throw std::runtime_error("failed to open STL");
+    }
+
+    in.seekg(80);
+    std::uint32_t nTriangles = 0;
+    in.read(reinterpret_cast<char*>(&nTriangles), sizeof(nTriangles));
+
+    std::vector<Triangle> triangles;
+    triangles.reserve(nTriangles);
+
+    for (std::uint32_t i = 0; i < nTriangles; ++i) {
+      float values[12] = {};
+      std::uint16_t attr = 0;
+      in.read(reinterpret_cast<char*>(values), sizeof(values));
+      in.read(reinterpret_cast<char*>(&attr), sizeof(attr));
+      if (!in) {
+        throw std::runtime_error("truncated binary STL");
+      }
+
+      triangles.push_back({
+        G4ThreeVector(values[3]*mm, values[4]*mm, values[5]*mm),
+        G4ThreeVector(values[6]*mm, values[7]*mm, values[8]*mm),
+        G4ThreeVector(values[9]*mm, values[10]*mm, values[11]*mm)
+      });
+    }
+
+    return triangles;
+  }
+
+  std::vector<Triangle> ReadAsciiSTL(const std::filesystem::path& path) {
+    std::ifstream in(path);
+    if (!in) {
+      throw std::runtime_error("failed to open STL");
+    }
+
+    std::vector<G4ThreeVector> vertices;
+    std::string word;
+    while (in >> word) {
+      std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c) { return std::tolower(c); });
+      if (word == "vertex") {
+        double x = 0.0, y = 0.0, z = 0.0;
+        in >> x >> y >> z;
+        vertices.emplace_back(x*mm, y*mm, z*mm);
+      }
+    }
+
+    if (vertices.size() % 3 != 0) {
+      throw std::runtime_error("ASCII STL vertex count is not divisible by 3");
+    }
+
+    std::vector<Triangle> triangles;
+    triangles.reserve(vertices.size()/3);
+    for (std::size_t i = 0; i < vertices.size(); i += 3) {
+      triangles.push_back({vertices[i], vertices[i + 1], vertices[i + 2]});
+    }
+    return triangles;
+  }
+
+  G4ThreeVector TopasToGeant4Point(const G4ThreeVector& p) {
+    // TOPAS model beam axis is -Y. This Geant4 application uses +Z as beam axis.
+    // Map: TOPAS X -> G4 X, TOPAS Z -> G4 Y, TOPAS -Y -> G4 Z.
+    return G4ThreeVector(p.x(), p.z(), -p.y());
+  }
+
+  G4ThreeVector TopasToGeant4Translation(G4double xTopas, G4double yTopas, G4double zTopas) {
+    return TopasToGeant4Point(G4ThreeVector(xTopas, yTopas, zTopas));
+  }
+
+  G4TessellatedSolid* LoadTopasSTLAsG4Solid(const G4String& solidName, const std::string& filename, Bounds& bounds) {
+    const auto path = ResolveSTLPath(filename);
+    std::vector<Triangle> triangles;
+    try {
+      triangles = LooksLikeAsciiSTL(path) ? ReadAsciiSTL(path) : ReadBinarySTL(path);
+    } catch (const std::exception& e) {
+      G4ExceptionDescription msg;
+      msg << "Failed to parse STL file '" << path.string() << "': " << e.what();
+      G4Exception("BeamlineGeometry::LoadTopasSTLAsG4Solid", "FlashElectronSim002", FatalException, msg);
+    }
+
+    auto solid = new G4TessellatedSolid(solidName);
+    for (const auto& tri : triangles) {
+      const auto a = TopasToGeant4Point(tri.a);
+      const auto b = TopasToGeant4Point(tri.b);
+      const auto c = TopasToGeant4Point(tri.c);
+      bounds.Include(a);
+      bounds.Include(b);
+      bounds.Include(c);
+      solid->AddFacet(new G4TriangularFacet(a, b, c, ABSOLUTE));
+    }
+    solid->SetSolidClosed(true);
+
+    G4cout << "[Beamline CAD] Loaded " << filename << " as " << solidName
+           << " with " << triangles.size() << " triangles" << G4endl;
+    return solid;
+  }
+
+  G4LogicalVolume* PlaceTopasCAD(G4LogicalVolume* worldLV,
+                                 const G4String& name,
+                                 const std::string& filename,
+                                 G4Material* material,
+                                 const G4ThreeVector& topasTranslation,
+                                 const G4Colour& colour,
+                                 Bounds& globalBounds) {
+    Bounds localBounds;
+    auto solid = LoadTopasSTLAsG4Solid(name + "Solid", filename, localBounds);
+    auto logic = new G4LogicalVolume(solid, material, name + "LV");
+    const auto translation = TopasToGeant4Translation(topasTranslation.x(), topasTranslation.y(), topasTranslation.z());
+    new G4PVPlacement(nullptr, translation, logic, name + "PV", worldLV, false, 0, true);
+    SetSolidVis(logic, colour);
+
+    globalBounds.Include(localBounds.min + translation);
+    globalBounds.Include(localBounds.max + translation);
+
+    G4cout << "[Beamline CAD] Placed " << name << " at G4 (x,y,z)= "
+           << translation.x()/mm << ", " << translation.y()/mm << ", " << translation.z()/mm
+           << " mm" << G4endl;
+    return logic;
   }
 }
 
 BeamlineHandles BeamlineGeometry::BuildBeamline(G4LogicalVolume* worldLV, G4double applicatorIDmm)
 {
   BeamlineHandles h;
+  (void)applicatorIDmm; // The supplied TOPAS CAD set is the 100 mm applicator geometry.
 
   auto nist = G4NistManager::Instance();
-  auto air        = nist->FindOrBuildMaterial("G4_AIR");
-  auto al         = nist->FindOrBuildMaterial("G4_Al");
-  auto graphite   = nist->FindOrBuildMaterial("G4_GRAPHITE");   // placeholder collimator material
-  auto plexiglass = nist->FindOrBuildMaterial("G4_PLEXIGLASS"); // PMMA
+  auto al = nist->FindOrBuildMaterial("G4_Al");
+  auto graphite = nist->FindOrBuildMaterial("G4_GRAPHITE");
+  auto steel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
+  auto plexiglass = nist->FindOrBuildMaterial("G4_PLEXIGLASS");
 
-// -------------------------
-// eWindow (REFERENCE PLANE ONLY) at z=0
-// -------------------------
-{
-  h.zWindow = 0.0*mm;
+  // CAD placement copied from the supplied TOPAS parameter file, converted from
+  // TOPAS beam axis (-Y) to this Geant4 application's beam axis (+Z).
+  Bounds cadBounds;
+  PlaceTopasCAD(worldLV, "UnionAl", "UnionAl.stl", al,
+                G4ThreeVector(0.0*mm, 153.5*mm, -117.5*mm), TopasOrange(), cadBounds);
+  PlaceTopasCAD(worldLV, "CAD4_bis", "CAD4_bis.stl", graphite,
+                G4ThreeVector(0.0*mm, 64.9*mm, 0.0*mm), G4Colour::Gray(), cadBounds);
+  PlaceTopasCAD(worldLV, "CAD6", "CAD6.stl", al,
+                G4ThreeVector(0.0*mm, 153.5*mm, -117.5*mm), TopasOrange(), cadBounds);
+  PlaceTopasCAD(worldLV, "CAD7", "CAD7.stl", steel,
+                G4ThreeVector(0.0*mm, 153.48*mm, -117.5*mm), G4Colour::Gray(), cadBounds);
+  PlaceTopasCAD(worldLV, "CAD11", "CAD11.stl", steel,
+                G4ThreeVector(0.0*mm, 153.48*mm, -117.5*mm), G4Colour::Gray(), cadBounds);
+  PlaceTopasCAD(worldLV, "CAD12", "CAD12.stl", al,
+                G4ThreeVector(0.0*mm, 153.45*mm, -117.5*mm), TopasOrange(), cadBounds);
 
-  auto solid = new G4Tubs("eWindow",
-                          0.0*mm,
-                          58.0*mm,     // >= applicator OD/2 (58 mm)
-                          0.1*mm/2,
-                          0.*deg, 360.*deg);
+  h.applicatorLV = PlaceTopasCAD(worldLV, "Applicator10cm", "Applicateaur100mmx428mm.stl", plexiglass,
+                                 G4ThreeVector(0.0*mm, -68.0*mm, 0.0*mm), G4Colour::Blue(), cadBounds);
 
-  auto logic = new G4LogicalVolume(solid, air, "eWindowLV");
-  new G4PVPlacement(nullptr, G4ThreeVector(0,0,h.zWindow), logic,
-                    "eWindowPV", worldLV, false, 0, true);
-  SetSolidVis(logic, G4Colour::White());
+  // From the STL bounds and TOPAS placement: applicator local Y spans -362..66 mm,
+  // with TransY=-68 mm, so the downstream exit face is at TOPAS Y=-430 mm.
+  // Under the mapping G4 Z = -TOPAS Y, the water phantom starts at z=430 mm.
+  h.zWindow = TopasToGeant4Translation(0.0*mm, 121.65*mm, 0.0*mm).z();
+  h.zAppEntrance = TopasToGeant4Translation(0.0*mm, -2.0*mm, 0.0*mm).z();
+  h.zAppExit = TopasToGeant4Translation(0.0*mm, -430.0*mm, 0.0*mm).z();
+  h.appInnerR = 50.0*mm;
+  h.appOuterR = 58.0*mm;
+  h.appLength = 428.0*mm;
 
-  // --- Source cutoff aperture at e-window (air, thin) ---
-  {
-    const auto halfZ = 0.05*mm;   // 0.1 mm thick
-    const auto rCut  = 2.2*mm;    // CutoffX = CutoffY = 2.2 mm
-
-    auto cutSolid = new G4Tubs("SourceCutoff",
-                               0.0*mm, rCut, halfZ,
-                               0.*deg, 360.*deg);
-
-    auto cutLV = new G4LogicalVolume(cutSolid, air, "SourceCutoffLV");
-
-    // place it at the electron window plane z=0
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), cutLV,
-                  "SourceCutoffPV", logic, false, 0, true);
-
-    cutLV->SetVisAttributes(G4VisAttributes::GetInvisible()); // optional
-  }
-}
-
-  // -------------------------
-  // Aluminium foils (4x): 0.2 mm thick; 2.2 mm air gap; foil1 ~ 20 mm downstream
-  // centre-to-centre spacing = 0.2 + 2.2 = 2.4 mm
-  // -------------------------
-  auto makeFoil = [&](const G4String& name, G4double zPos) {
-    auto solid = new G4Tubs(name,
-                            0.0*mm,
-                            50.0*mm,     // placeholder radius (>= beam envelope)
-                            0.2*mm/2,
-                            0.*deg, 360.*deg);
-    auto logic = new G4LogicalVolume(solid, al, name + "LV");
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,zPos), logic,
-                      name + "PV", worldLV, false, 0, true);
-    SetSolidVis(logic, G4Colour::Yellow());
-  };
-
-  h.zFoil1 = 20.0*mm;
-  const auto dzFoilCC = 2.4*mm;
-
-  makeFoil("AlFoil1", h.zFoil1);
-  makeFoil("AlFoil2", h.zFoil1 + 1*dzFoilCC);
-  makeFoil("AlFoil3", h.zFoil1 + 2*dzFoilCC);
-  h.zFoil4 = h.zFoil1 + 3*dzFoilCC;
-  makeFoil("AlFoil4", h.zFoil4);
-
-  // -------------------------
-  // Fixed aperture collimator (manufacturer geometry)
-  // Aperture diameter = 20 mm
-  // Outer diameter    = 68 mm
-  // Cylinder height   = 48.6 mm
-  // -------------------------
-  {
-    const auto collOuterR    = 34.0*mm;     // OD 68 mm
-    const auto collThickness = 48.6*mm;     // height
-    const auto collHalfZ     = collThickness/2.0;
-
-    const auto boreR         = 10.0*mm;     // aperture diameter 20 mm
-
-    // Place it AFTER the last foil (avoid overlap)
-    // Foil4 center = h.zFoil4, foil half-thickness = 0.1 mm
-    const auto foilHalfZ = 0.1*mm;
-    const auto gapAfterFoils = 1.0*mm;      // not specified; small air gap
-
-    // Set collimator upstream face just after foil4 downstream face + gap
-    const auto zCollIn = h.zFoil4 + foilHalfZ + gapAfterFoils;
-    h.zCollCenter = zCollIn + collHalfZ;
-
-    auto outer = new G4Tubs("FixColl_outer", 0.0*mm, collOuterR, collHalfZ, 0.*deg, 360.*deg);
-    auto hole  = new G4Tubs("FixColl_hole",  0.0*mm, boreR,      collHalfZ + 1*um, 0.*deg, 360.*deg);
-    auto solid = new G4SubtractionSolid("FixColl", outer, hole);
-
-    // Material not provided → keep your placeholder unless they confirm it
-    auto logic = new G4LogicalVolume(solid, graphite, "FixCollLV");
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,h.zCollCenter), logic,
-                      "FixCollPV", worldLV, false, 0, true);
-    SetSolidVis(logic, G4Colour::Gray());
-
-    h.zCollExit = h.zCollCenter + collHalfZ;
-
-
-    // === DEBUG PRINTS ===
-    G4cout << "\n[Beamline DEBUG]\n";
-    G4cout << "Foil4 center z = " << h.zFoil4/mm << " mm\n";
-    G4cout << "Coll upstream face z = "
-           << (h.zCollCenter - collHalfZ)/mm << " mm\n";
-    G4cout << "Coll exit z = " << h.zCollExit/mm << " mm\n\n";
-    
-  }
-
-  // -------------------------
-  // Applicator (PMMA), placed flush to collimator downstream face.
-  // Supported:
-  //  - ID=100 mm, OD=116 mm, L=428 mm
-  //  - ID=50  mm, OD=66  mm, L=428 mm
-  //  - ID=20  mm, OD=36  mm, L=428 mm
-  // -------------------------
-  {
-    G4double appID = applicatorIDmm;
-    G4double appOD = 116.0*mm;
-    G4double appL  = 428.0*mm;
-    G4String appName = "Applicator10cm";
-    G4String appLVName = "Applicator10cmLV";
-    G4String appPVName = "Applicator10cmPV";
-
-    if (std::abs(applicatorIDmm - 50.0*mm) < 1e-6*mm) {
-      appID = 50.0*mm;
-      appOD = 66.0*mm;
-      appName = "Applicator5cm";
-      appLVName = "Applicator5cmLV";
-      appPVName = "Applicator5cmPV";
-    } else if (std::abs(applicatorIDmm - 20.0*mm) < 1e-6*mm) {
-      appID = 20.0*mm;
-      appOD = 36.0*mm;
-      appName = "Applicator2cm";
-      appLVName = "Applicator2cmLV";
-      appPVName = "Applicator2cmPV";
-    } else {
-      appID = 100.0*mm;
-      appOD = 116.0*mm;
-    }
-
-    const auto appRin   = appID/2.0;
-    const auto appRout  = appOD/2.0;
-    const auto appHalfZ = appL/2;
-
-    // Small tolerance to avoid coincident surfaces (prevents overlap warnings)
-    const auto epsR = 1.0*um;
-    const auto epsZ = 1.0*um;
-
-    h.zAppEntrance = h.zCollExit;               // flush to collimator exit
-    const auto zAppCenter = h.zAppEntrance + appHalfZ;
-
-    // PMMA tube (hollow by definition)
-    auto appSolid = new G4Tubs(appName,
-                               appRin, appRout, appHalfZ,
-                               0.*deg, 360.*deg);
-
-    auto appLV = new G4LogicalVolume(appSolid, plexiglass, appLVName);
-
-    new G4PVPlacement(nullptr, G4ThreeVector(0,0,zAppCenter), appLV,
-                      appPVName, worldLV, false, 0, true);
-
-    SetSolidVis(appLV, G4Colour::Blue());
-
-    // AIR bore inside applicator (for filtering/stepping logic)
-    // IMPORTANT: shrink slightly so it does NOT sit exactly on the mother boundary
-    //auto boreSolid = new G4Tubs("ApplicatorBore10cm",
-                                //0.0*mm,
-                                //appRin - epsR,
-                                //appHalfZ - epsZ,
-                                //0.*deg, 360.*deg);
-
-    //auto boreLV = new G4LogicalVolume(boreSolid, air, "ApplicatorBore10cmLV");
-
-    // Bore centered in local coords of the applicator LV
-    //new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), boreLV,
-                      //"ApplicatorBore10cmPV", appLV, false, 0, true);
-
-    //boreLV->SetVisAttributes(G4VisAttributes::GetInvisible());
-
-    //h.applicatorLV = appLV;
-    //h.zAppExit     = h.zAppEntrance + appL;
-  //}
-  
-    // -------------------------
-  // Thin air exit plane at applicator exit (for debugging / scoring)
-  // -------------------------
-  //const auto exitThickness = 0.1*mm;
-    //const auto exitHalfZ     = exitThickness/2;
-    //const auto eps           = 0.1*mm;   // small gap to avoid overlap
-
-    //const auto zExitCenter = h.zAppExit + exitHalfZ + eps;
-
-    //auto exitSolid = new G4Tubs("ExitPlane",
-                                //0.0*mm,
-                                //60.0*mm,      // slightly larger than bore
-                                //exitHalfZ,
-                                //0.*deg, 360.*deg);
-
-    //auto exitLV = new G4LogicalVolume(exitSolid, air, "ExitPlaneLV");
-
-    //new G4PVPlacement(nullptr,
-                      //G4ThreeVector(0,0,zExitCenter),
-                      //exitLV,
-                      //"ExitPlanePV",
-                      //worldLV,
-                      //false, 0, true);
-
-    //SetSolidVis(exitLV, G4Colour::Red());
-
-    //h.zExitPlane = zExitCenter;
-  //}
-    h.applicatorLV = appLV;
-    h.zAppExit     = h.zAppEntrance + appL;
-    h.appInnerR    = appRin;
-    h.appOuterR    = appRout;
-    h.appLength    = appL;
-
-    G4cout << "Applicator ID/OD/L = "
-           << (2.0*appRin)/mm << " / "
-           << (2.0*appRout)/mm << " / "
-           << appL/mm << " mm" << G4endl;
-  }
+  G4cout << "[Beamline CAD] Overall G4 bounds min/max (mm): ("
+         << cadBounds.min.x()/mm << ", " << cadBounds.min.y()/mm << ", " << cadBounds.min.z()/mm
+         << ") / (" << cadBounds.max.x()/mm << ", " << cadBounds.max.y()/mm << ", "
+         << cadBounds.max.z()/mm << ")" << G4endl;
+  G4cout << "[Beamline CAD] Source plane Z = " << h.zWindow/mm << " mm" << G4endl;
+  G4cout << "[Beamline CAD] Applicator entrance/exit Z = "
+         << h.zAppEntrance/mm << " / " << h.zAppExit/mm << " mm" << G4endl;
 
   return h;
 }
