@@ -54,10 +54,6 @@ namespace {
     }
   };
 
-  G4Colour TopasOrange() {
-    return G4Colour(1.0, 0.5, 0.0);
-  }
-
   void SetSolidVis(G4LogicalVolume* lv, const G4Colour& c) {
     auto vis = new G4VisAttributes(c);
     vis->SetForceSolid(true);
@@ -241,17 +237,17 @@ BeamlineHandles BeamlineGeometry::BuildBeamline(G4LogicalVolume* worldLV, G4doub
   // TOPAS beam axis (-Y) to this Geant4 application's beam axis (+Z).
   Bounds cadBounds;
   PlaceTopasCAD(worldLV, "UnionAl", "UnionAl.stl", al,
-                G4ThreeVector(0.0*mm, 153.5*mm, -117.5*mm), TopasOrange(), cadBounds);
+                G4ThreeVector(0.0*mm, 153.5*mm, -117.5*mm), G4Colour::Orange(), cadBounds);
   PlaceTopasCAD(worldLV, "CAD4_bis", "CAD4_bis.stl", graphite,
                 G4ThreeVector(0.0*mm, 64.9*mm, 0.0*mm), G4Colour::Gray(), cadBounds);
   PlaceTopasCAD(worldLV, "CAD6", "CAD6.stl", al,
-                G4ThreeVector(0.0*mm, 153.5*mm, -117.5*mm), TopasOrange(), cadBounds);
+                G4ThreeVector(0.0*mm, 153.5*mm, -117.5*mm), G4Colour::Orange(), cadBounds);
   PlaceTopasCAD(worldLV, "CAD7", "CAD7.stl", steel,
                 G4ThreeVector(0.0*mm, 153.48*mm, -117.5*mm), G4Colour::Gray(), cadBounds);
   PlaceTopasCAD(worldLV, "CAD11", "CAD11.stl", steel,
                 G4ThreeVector(0.0*mm, 153.48*mm, -117.5*mm), G4Colour::Gray(), cadBounds);
   PlaceTopasCAD(worldLV, "CAD12", "CAD12.stl", al,
-                G4ThreeVector(0.0*mm, 153.45*mm, -117.5*mm), TopasOrange(), cadBounds);
+                G4ThreeVector(0.0*mm, 153.45*mm, -117.5*mm), G4Colour::Orange(), cadBounds);
 
   h.applicatorLV = PlaceTopasCAD(worldLV, "Applicator10cm", "Applicateaur100mmx428mm.stl", plexiglass,
                                  G4ThreeVector(0.0*mm, -68.0*mm, 0.0*mm), G4Colour::Blue(), cadBounds);
