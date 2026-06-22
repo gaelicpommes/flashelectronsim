@@ -22,6 +22,12 @@ target_compile_definitions(FlashElectronSim PRIVATE PROJECT_SOURCE_DIR="${PROJEC
 # Link Geant4
 target_link_libraries(FlashElectronSim ${Geant4_LIBRARIES})
 
+# Convenience lowercase launcher name for users who type ./flashelectronsim.
+add_custom_command(TARGET FlashElectronSim POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+          $<TARGET_FILE_NAME:FlashElectronSim>
+          ${PROJECT_BINARY_DIR}/flashelectronsim)
+
 # ---- Copy macros into build/macros ----
 file(GLOB MACRO_FILES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/macros/*.mac")
 
