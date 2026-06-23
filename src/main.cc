@@ -64,10 +64,10 @@ int main(int argc, char** argv)
     auto* ui = new G4UIExecutive(argc, argv);
 
     // No macro argument means the user wants an interactive visualization session.
-    // Preload the standard viewer and source so the Qt/OpenGL GUI appears with
-    // geometry already drawn, while still leaving the command prompt open.
-    uiManager->ApplyCommand("/control/execute macros/vis.mac");
+    // Preload the TOPAS-equivalent source before visualization initializes the
+    // run, then draw the geometry while still leaving the command prompt open.
     uiManager->ApplyCommand("/control/execute macros/source.mac");
+    uiManager->ApplyCommand("/control/execute macros/vis.mac");
     G4cout << "[FlashElectronSim] Interactive GUI ready. Example command: /run/beamOn 10" << G4endl;
 
     ui->SessionStart();

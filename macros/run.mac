@@ -6,6 +6,9 @@
 /event/verbose 0
 /tracking/verbose 0
 
+# Keep batch runs aligned with the TOPAS CAD geometry.
+/control/execute source.mac
+
 /run/initialize
 /run/beamOn 10
 /vis/viewer/flush
