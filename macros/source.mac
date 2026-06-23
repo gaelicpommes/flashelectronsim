@@ -1,16 +1,20 @@
-# macros/source.mac  (Geant4 GPS - manufacturer beam model at window plane)
-# Note: Your Geant4 GPS likely does NOT support cutoff_x/cutoff_y. We approximate with Gaussian + geometry collimation.
+# macros/source.mac
+# Default legacy Gaussian source for interactive/manual runs.
+# For batch scans, runpossib.slurm fills macros/sourcepossib.mac from finalgrid.csv.
 
 /gps/particle e-
-/gps/ene/type Mono
-/gps/ene/mono 9.5 MeV
+/gps/ene/type Gauss
+/gps/ene/mono 9.70 MeV
+/gps/ene/sigma 1.30 MeV
 
-# Gaussian spot at the eWindow reference plane (z=0)
-# Cutoff ~2.2 mm corresponds roughly to ~3σ => σ ≈ 0.73 mm
+/gps/ang/type beam2d
+/gps/ang/rot1 1 0 0
+/gps/ang/rot2 0 -1 0
+/gps/ang/sigma_x 0.2 deg
+/gps/ang/sigma_y 0.2 deg
+
 /gps/pos/type Beam
-/gps/pos/centre 0 0 0 mm
+/gps/pos/centre 0 0 -121.65 mm
 /gps/pos/sigma_x 0.73 mm
 /gps/pos/sigma_y 0.73 mm
-
-# Start with pencil direction along +Z (add divergence later if needed)
-/gps/direction 0 0 1
+/gps/pos/confine SourceCutoffPV

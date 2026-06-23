@@ -2,7 +2,6 @@
 // main.cc
 #include "G4RunManagerFactory.hh"
 #include "G4UImanager.hh"
-#include "G4UIExecutive.hh"
 #include "G4VisExecutive.hh"
 
 #include "FTFP_BERT.hh"
@@ -12,6 +11,7 @@
 #include "ActionInitialization.hh"
 #include "G4ScoringManager.hh"
 #include "G4String.hh"
+#include "G4ios.hh"
 #include <algorithm>
 #include <cstdlib>
 #if defined(G4MULTITHREADED)
@@ -60,9 +60,9 @@ int main(int argc, char** argv)
   if (argc > 1) {
     uiManager->ApplyCommand("/control/execute " + G4String(argv[1]));
   } else {
-    auto* ui = new G4UIExecutive(argc, argv);
-    ui->SessionStart();
-    delete ui;
+    G4cout << "[FlashElectronSim] No macro supplied. Batch usage: ./FlashElectronSim <macro.mac>" << G4endl;
+    G4cout << "[FlashElectronSim] For the Slurm workflow, submit runpossib.slurm from the project root." << G4endl;
+    G4cout << "[FlashElectronSim] Optional visualization remains available with: ./FlashElectronSim macros/vis.mac" << G4endl;
   }
 
   delete visManager;

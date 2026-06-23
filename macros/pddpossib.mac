@@ -32,7 +32,7 @@
 /score/create/boxMesh pdd1D
 /score/mesh/boxSize 1 1 40 mm
 /score/mesh/nBin    1 1 160
-/score/mesh/translate/xyz 0 0 544.9 mm
+/score/mesh/translate/xyz 0 0 470.0 mm
 /score/quantity/doseDeposit pddDose
 /score/close
 
@@ -42,9 +42,9 @@
 # (C) Lateral profile at dmax depth (2D slab)
 # -------------------------
 /score/create/boxMesh latDmax2D
-/score/mesh/boxSize 75 75 0.25 mm
-/score/mesh/nBin    150 150 1
-/score/mesh/translate/xyz 0 0 518.9 mm
+/score/mesh/boxSize 75 2.5 0.5 mm
+/score/mesh/nBin    150 1 1
+/score/mesh/translate/xyz 0 0 444.0 mm
 /score/quantity/doseDeposit latDmaxDose
 /score/close
 
@@ -52,9 +52,9 @@
 # (D) Lateral profile at R50 depth (2D slab)
 # -------------------------
 /score/create/boxMesh latR50_2D
-/score/mesh/boxSize 75 75 0.25 mm
-/score/mesh/nBin    150 150 1
-/score/mesh/translate/xyz 0 0 538.3 mm
+/score/mesh/boxSize 75 2.5 0.5 mm
+/score/mesh/nBin    150 1 1
+/score/mesh/translate/xyz 0 0 463.4 mm
 /score/quantity/doseDeposit latR50Dose
 /score/close
 
@@ -62,9 +62,9 @@
 # (E) Lateral profile at mid-depth (2D slab)
 # -------------------------
 /score/create/boxMesh latMid2D
-/score/mesh/boxSize 75 75 0.25 mm
-/score/mesh/nBin    150 150 1
-/score/mesh/translate/xyz 0 0 528.6 mm
+/score/mesh/boxSize 75 2.5 0.5 mm
+/score/mesh/nBin    150 1 1
+/score/mesh/translate/xyz 0 0 453.7 mm
 /score/quantity/doseDeposit latMidDose
 /score/close
 

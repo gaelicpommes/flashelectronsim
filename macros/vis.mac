@@ -2,24 +2,27 @@
 
 /control/macroPath macros
 
-# 1) Make sure geometry exists
+# 1) Make sure geometry exists first, because /gps/pos/confine needs SourceCutoffPV.
 /run/initialize
 
-# 2) Open viewer + create a scene
+# 2) Load the source after initialization so SourceCutoffPV exists.
+/control/execute source.mac
+
+# 3) Open viewer + create a scene
 /vis/open OGLSQt
 /vis/scene/create
 
-# 3) Add geometry to scene (THIS is what was failing)
+# 4) Add geometry to scene (THIS is what was failing)
 /vis/scene/add/volume
 /vis/drawVolume
 /vis/viewer/set/style surface
 
-# 4) Trajectories
+# 5) Trajectories
 /tracking/storeTrajectory 1
 /vis/scene/add/trajectories smooth
 /vis/scene/endOfEventAction accumulate 10
 
-# 5) Color by particle type
+# 6) Color by particle type
 /vis/modeling/trajectories/create/drawByParticleID
 /vis/modeling/trajectories/drawByParticleID-0/set e- red
 /vis/modeling/trajectories/drawByParticleID-0/set e+ magenta
