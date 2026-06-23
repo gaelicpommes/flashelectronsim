@@ -5,7 +5,7 @@
 #SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=15
 #SBATCH --mem=8G
-#SBATCH --array=1-7%1
+#SBATCH --array=1-6%1
 #SBATCH --requeue
 
 set -euo pipefail
@@ -17,8 +17,7 @@ module load Geant4-data/11.3
 cd /scratch/brussel/113/vsc11383/projects/third_sim/FlashElectronSim/build
 export G4FORCENUMBEROFTHREADS=${SLURM_CPUS_PER_TASK}
 
-CSV="../macros/1404paramgridv5.csv"
-APPLICATOR_CM=10
+CSV="../macros/flash_profile_grid.csv"
 
 # -------------------------
 # Human-readable beamOn tag
@@ -61,8 +60,8 @@ if [[ -z "${LINE}" ]]; then
 fi
 
 # CSV columns:
-# run_id,beamOn,Emean_MeV,sigmaE_MeV,sigmaTheta_deg,sigma_x_mm,sigma_y_mm
-IFS=',' read -r RUNID BEAMON EMEAN SIGE SIGTH SX SY <<< "${LINE}"
+# run_id,beamOn,Emean_MeV,sigmaE_MeV,sigmaTheta_deg,sigma_x_mm,sigma_y_mm,applicator_cm,latDmax_z_mm,latR50_z_mm,latMid_z_mm
+IFS=',' read -r RUNID BEAMON EMEAN SIGE SIGTH SX SY APPLICATOR_CM LAT_DMAX_Z LAT_R50_Z LAT_MID_Z <<< "${LINE}"
 
 # Trim whitespace just in case
 RUNID=$(echo "${RUNID}" | xargs)
@@ -72,13 +71,17 @@ SIGE=$(echo "${SIGE}" | xargs)
 SIGTH=$(echo "${SIGTH}" | xargs)
 SX=$(echo "${SX}" | xargs)
 SY=$(echo "${SY}" | xargs)
+APPLICATOR_CM=$(echo "${APPLICATOR_CM}" | xargs)
+LAT_DMAX_Z=$(echo "${LAT_DMAX_Z}" | xargs)
+LAT_R50_Z=$(echo "${LAT_R50_Z}" | xargs)
+LAT_MID_Z=$(echo "${LAT_MID_Z}" | xargs)
 
 BEAMTAG=$(format_beamon_tag "${BEAMON}")
 
-echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY}"
+echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) app=${APPLICATOR_CM}cm E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY} zDmax=${LAT_DMAX_Z} zR50=${LAT_R50_Z} zMid=${LAT_MID_Z}"
 
 # Make a short tag for filenames
-TAG="r${RUNID}_E${EMEAN}_sE${SIGE}_sTh${SIGTH}"
+TAG="r${RUNID}_${APPLICATOR_CM}cm_E${EMEAN}_sE${SIGE}_sTh${SIGTH}"
 
 # Clean tag: replace '.' with 'p'
 TAG_CLEAN=$(echo "${TAG}" | sed 's/\./p/g')
@@ -116,6 +119,9 @@ sed -e "s|SOURCE_MAC|${SRCMAC}|g" \
     -e "s|LAT_R50_DOSE_TXT|${LAT_R50}|g" \
     -e "s|LAT_MID_DOSE_TXT|${LAT_MID}|g" \
     -e "s|APPLICATOR_CM|${APPLICATOR_CM}|g" \
+    -e "s|LAT_DMAX_Z|${LAT_DMAX_Z}|g" \
+    -e "s|LAT_R50_Z|${LAT_R50_Z}|g" \
+    -e "s|LAT_MID_Z|${LAT_MID_Z}|g" \
     ../macros/pddpossib.mac > "${RUNMAC}"
 
 ./FlashElectronSim "${RUNMAC}"
