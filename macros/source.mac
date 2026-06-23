@@ -1,15 +1,20 @@
-# macros/source.mac  (Geant4 GPS - TOPAS-equivalent source at BeamPosition)
+# macros/source.mac
+# Default legacy Gaussian source for interactive/manual runs.
+# For batch scans, runpossib.slurm fills macros/sourcepossib.mac from finalgrid.csv.
 
 /gps/particle e-
-/gps/ene/type Mono
-/gps/ene/mono 9.5 MeV
+/gps/ene/type Gauss
+/gps/ene/mono 9.70 MeV
+/gps/ene/sigma 1.30 MeV
 
-# TOPAS source: Flat ellipse, CutoffX=CutoffY=2.2 mm, BeamPosition TransY=121.65 mm, RotX=-90 deg.
-# The CAD converter maps TOPAS -Y to Geant4 +Z, so TOPAS Y=121.65 mm becomes G4 Z=-121.65 mm.
-/gps/pos/type Plane
-/gps/pos/shape Circle
+/gps/ang/type beam2d
+/gps/ang/rot1 1 0 0
+/gps/ang/rot2 0 -1 0
+/gps/ang/sigma_x 0.2 deg
+/gps/ang/sigma_y 0.2 deg
+
+/gps/pos/type Beam
 /gps/pos/centre 0 0 -121.65 mm
-/gps/pos/radius 2.2 mm
-
-# TOPAS RotX=-90 deg points the beam down TOPAS -Y, mapped here to +Z.
-/gps/direction 0 0 1
+/gps/pos/sigma_x 0.73 mm
+/gps/pos/sigma_y 0.73 mm
+/gps/pos/confine SourceCutoffPV

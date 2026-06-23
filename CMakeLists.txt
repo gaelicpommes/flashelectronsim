@@ -9,8 +9,22 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Geant4 REQUIRED ui_all vis_all)
 include(${Geant4_USE_FILE})
 
-# Collect sources/headers
-file(GLOB sources CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/src/*.cc)
+# Collect sources/headers. Keep the source list explicit so local backup or
+# scratch files such as BeamlineGeometry_hybrid.cc are not linked into the
+# executable and do not duplicate BeamlineGeometry::BuildBeamline.
+set(sources
+  ${PROJECT_SOURCE_DIR}/src/ActionInitialization.cc
+  ${PROJECT_SOURCE_DIR}/src/Analysis.cc
+  ${PROJECT_SOURCE_DIR}/src/BeamlineGeometry.cc
+  ${PROJECT_SOURCE_DIR}/src/DetectorConstruction.cc
+  ${PROJECT_SOURCE_DIR}/src/ExitPlane.cc
+  ${PROJECT_SOURCE_DIR}/src/PhantomGeometry.cc
+  ${PROJECT_SOURCE_DIR}/src/PrimaryGeneratorAction.cc
+  ${PROJECT_SOURCE_DIR}/src/RunAction.cc
+  ${PROJECT_SOURCE_DIR}/src/SteppingAction.cc
+  ${PROJECT_SOURCE_DIR}/src/main.cc
+)
+
 file(GLOB headers CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/include/*.hh)
 
 add_executable(FlashElectronSim ${sources} ${headers})

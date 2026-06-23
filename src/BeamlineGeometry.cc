@@ -9,6 +9,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4TessellatedSolid.hh"
 #include "G4TriangularFacet.hh"
+#include "G4Tubs.hh"
 #include "G4VisAttributes.hh"
 #include "G4ios.hh"
 #include "G4Exception.hh"
@@ -17,6 +18,7 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -229,13 +231,12 @@ namespace {
 BeamlineHandles BeamlineGeometry::BuildBeamline(G4LogicalVolume* worldLV, G4double applicatorIDmm)
 {
   BeamlineHandles h;
-  (void)applicatorIDmm; // The supplied TOPAS CAD set is the 100 mm applicator geometry.
-
   auto nist = G4NistManager::Instance();
   auto al = nist->FindOrBuildMaterial("G4_Al");
   auto graphite = nist->FindOrBuildMaterial("G4_GRAPHITE");
   auto steel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
   auto plexiglass = nist->FindOrBuildMaterial("G4_PLEXIGLASS");
+  auto air = nist->FindOrBuildMaterial("G4_AIR");
 
   // CAD placement copied from the supplied TOPAS parameter file, converted from
   // TOPAS beam axis (-Y) to this Geant4 application's beam axis (+Z).
@@ -253,18 +254,59 @@ BeamlineHandles BeamlineGeometry::BuildBeamline(G4LogicalVolume* worldLV, G4doub
   PlaceTopasCAD(worldLV, "CAD12", "CAD12.stl", al,
                 G4ThreeVector(0.0*mm, 153.45*mm, -117.5*mm), TopasOrange(), cadBounds);
 
-  h.applicatorLV = PlaceTopasCAD(worldLV, "Applicator10cm", "Applicateaur100mmx428mm.stl", plexiglass,
-                                 G4ThreeVector(0.0*mm, -68.0*mm, 0.0*mm), G4Colour::Blue(), cadBounds);
-
-  // From the STL bounds and TOPAS placement: applicator local Y spans -362..66 mm,
-  // with TransY=-68 mm, so the downstream exit face is at TOPAS Y=-430 mm.
-  // Under the mapping G4 Z = -TOPAS Y, the water phantom starts at z=430 mm.
-  h.zWindow = TopasToGeant4Translation(0.0*mm, 121.65*mm, 0.0*mm).z();
+  // Keep the original supplied TOPAS STL applicator for the 10 cm option.
+  // For 5 cm and 2 cm, use analytic PMMA tubes with the same TOPAS applicator
+  // length/placement so every applicator exit remains flush with the phantom.
   h.zAppEntrance = TopasToGeant4Translation(0.0*mm, -2.0*mm, 0.0*mm).z();
   h.zAppExit = TopasToGeant4Translation(0.0*mm, -430.0*mm, 0.0*mm).z();
-  h.appInnerR = 50.0*mm;
-  h.appOuterR = 58.0*mm;
-  h.appLength = 428.0*mm;
+  h.appLength = h.zAppExit - h.zAppEntrance;
+
+  if (std::abs(applicatorIDmm - 50.0*mm) < 1e-6*mm ||
+      std::abs(applicatorIDmm - 20.0*mm) < 1e-6*mm) {
+    G4double appID = 50.0*mm;
+    G4double appOD = 65.0*mm;
+    G4String appName = "Applicator5cm";
+
+    if (std::abs(applicatorIDmm - 20.0*mm) < 1e-6*mm) {
+      appID = 20.0*mm;
+      appOD = 35.0*mm;
+      appName = "Applicator2cm";
+    }
+
+    h.appInnerR = appID/2.0;
+    h.appOuterR = appOD/2.0;
+    const auto appHalfZ = h.appLength/2.0;
+    const auto appCenterZ = h.zAppEntrance + appHalfZ;
+    auto appSolid = new G4Tubs(appName, h.appInnerR, h.appOuterR, appHalfZ, 0.*deg, 360.*deg);
+    auto appLV = new G4LogicalVolume(appSolid, plexiglass, appName + "LV");
+    new G4PVPlacement(nullptr, G4ThreeVector(0, 0, appCenterZ), appLV,
+                      appName + "PV", worldLV, false, 0, true);
+    SetSolidVis(appLV, G4Colour::Blue());
+
+    h.applicatorLV = appLV;
+    cadBounds.Include(G4ThreeVector(-h.appOuterR, -h.appOuterR, h.zAppEntrance));
+    cadBounds.Include(G4ThreeVector( h.appOuterR,  h.appOuterR, h.zAppExit));
+  } else {
+    h.applicatorLV = PlaceTopasCAD(worldLV, "Applicator10cm", "Applicateaur100mmx428mm.stl", plexiglass,
+                                   G4ThreeVector(0.0*mm, -68.0*mm, 0.0*mm), G4Colour::Blue(), cadBounds);
+    h.appInnerR = 50.0*mm;
+    h.appOuterR = 58.0*mm;
+  }
+
+  // From the TOPAS 10 cm applicator STL bounds and placement: local Y spans
+  // -362..66 mm with TransY=-68 mm, so the entrance/exit faces are TOPAS
+  // Y=-2/-430 mm. Under the mapping G4 Z=-TOPAS Y, all applicator options
+  // span z=2..430 mm and the water phantom starts at z=430 mm.
+  h.zWindow = TopasToGeant4Translation(0.0*mm, 121.65*mm, 0.0*mm).z();
+
+  // Helper volume used only by /gps/pos/confine SourceCutoffPV in the
+  // legacy Gaussian source macros. It reproduces the old hard 2.2 mm
+  // source-plane cutoff while keeping the physical beamline CAD unchanged.
+  auto sourceCutoffSolid = new G4Tubs("SourceCutoff", 0.0, 2.2*mm, 0.05*mm, 0.*deg, 360.*deg);
+  auto sourceCutoffLV = new G4LogicalVolume(sourceCutoffSolid, air, "SourceCutoffLV");
+  new G4PVPlacement(nullptr, G4ThreeVector(0, 0, h.zWindow), sourceCutoffLV,
+                    "SourceCutoffPV", worldLV, false, 0, false);
+  sourceCutoffLV->SetVisAttributes(G4VisAttributes::GetInvisible());
 
   G4cout << "[Beamline CAD] Overall G4 bounds min/max (mm): ("
          << cadBounds.min.x()/mm << ", " << cadBounds.min.y()/mm << ", " << cadBounds.min.z()/mm
