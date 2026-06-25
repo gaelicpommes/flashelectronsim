@@ -52,8 +52,6 @@ foreach(_file ${MACRO_FILES})
   configure_file(${_file} ${PROJECT_BINARY_DIR}/macros/${_fname} COPYONLY)
 endforeach()
 
-
-
 # ---- Copy TOPAS CAD STL files into the build directory ----
 file(GLOB STL_FILES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/*.stl" "${PROJECT_SOURCE_DIR}/*.STL")
 
