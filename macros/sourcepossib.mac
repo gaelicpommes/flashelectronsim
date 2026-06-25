@@ -1,4 +1,11 @@
-#sourcepossib.mac
+# sourcepossib.mac
+# Legacy Gaussian source template filled by runpossib.slurm from CSV columns:
+# run_id,beamOn,Emean_MeV,sigmaE_MeV,sigmaTheta_deg,sigma_x_mm,sigma_y_mm
+#
+# This keeps your old source model, but translated to the CAD beamline:
+# TOPAS BeamPosition TransY=121.65 mm maps to Geant4 Z=-121.65 mm.
+# SourceCutoffPV is an invisible 2.2 mm radius helper volume at that plane,
+# so /gps/pos/confine keeps the old hard source cutoff.
 
 /control/macroPath macros
 /gps/verbose 0
@@ -19,8 +26,6 @@
 /gps/pos/centre 0 0 -121.65 mm
 /gps/pos/sigma_x SX mm
 /gps/pos/sigma_y SY mm
-
-
 /gps/pos/confine SourceCutoffPV
 
 

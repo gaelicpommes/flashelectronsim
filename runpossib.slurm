@@ -2,10 +2,10 @@
 #SBATCH --job-name=topas_pdd
 #SBATCH --output=logs/pddgrid_%A_%a.out
 #SBATCH --error=logs/pddgrid_%A_%a.err
-#SBATCH --time=119:00:00
-#SBATCH --cpus-per-task=30
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=31
 #SBATCH --mem=8G
-#SBATCH --array=1-9%1
+#SBATCH --array=1-1%1
 #SBATCH --requeue
 
 
@@ -19,13 +19,13 @@ cd /scratch/brussel/113/vsc11383/projects/third_sim/FlashElectronSim/build
 export G4FORCENUMBEROFTHREADS=${SLURM_CPUS_PER_TASK}
 
 CSV="../macros/finalgrid.csv"
-#APPLICATOR_CM=10
 # Select applicator ID in cm. Override at submit time, e.g. APPLICATOR_CM=5 sbatch runpossib.slurm
 APPLICATOR_CM="${APPLICATOR_CM:-10}"
 case "${APPLICATOR_CM}" in
   10|5|2) ;;
   *) echo "Invalid APPLICATOR_CM=${APPLICATOR_CM}; allowed values are 10, 5, or 2" >&2; exit 1 ;;
 esac
+
 # -------------------------
 # Human-readable beamOn tag
 # -------------------------
@@ -66,7 +66,7 @@ if [[ -z "${LINE}" ]]; then
   exit 1
 fi
 
-# CSV columns:
+# CSV columns for legacy Gaussian source runs:
 # run_id,beamOn,Emean_MeV,sigmaE_MeV,sigmaTheta_deg,sigma_x_mm,sigma_y_mm
 IFS=',' read -r RUNID BEAMON EMEAN SIGE SIGTH SX SY <<< "${LINE}"
 #IFS=',' read -r RUNID BEAMON <<< "${LINE}"
@@ -84,21 +84,18 @@ SY=$(echo "${SY}" | xargs)
 
 BEAMTAG=$(format_beamon_tag "${BEAMON}")
 
-echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY}"
+echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY} app=${APPLICATOR_CM}cm"
 
 #echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) TOPAS source app=${APPLICATOR_CM}cm"
 
 # Make a short tag for filenames
-TAG="r${RUNID}_E${EMEAN}_sE${SIGE}_sTh${SIGTH}"
-#TAG="r${RUNID}_${APPLICATOR_CM}cm_TOPAS"
-
-
+TAG="r${RUNID}_E${EMEAN}_sE${SIGE}_sTh${SIGTH}_${APPLICATOR_CM}cm"
 
 # Clean tag: replace '.' with 'p'
 TAG_CLEAN=$(echo "${TAG}" | sed 's/\./p/g')
 
 # -------------------------
-# Generate source macro
+# Generate the legacy Gaussian source macro from CSV parameters.
 # -------------------------
 SRCMAC="src_${TAG_CLEAN}_J${SLURM_JOB_ID}_T${SLURM_ARRAY_TASK_ID}.mac"
 
