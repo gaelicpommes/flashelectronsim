@@ -2,11 +2,12 @@
 #SBATCH --job-name=topas_pdd
 #SBATCH --output=logs/pddgrid_%A_%a.out
 #SBATCH --error=logs/pddgrid_%A_%a.err
-#SBATCH --time=12:00:00
-#SBATCH --cpus-per-task=31
+#SBATCH --time=119:00:00
+#SBATCH --cpus-per-task=30
 #SBATCH --mem=8G
-#SBATCH --array=1-1%1
+#SBATCH --array=1-9%1
 #SBATCH --requeue
+
 
 set -euo pipefail
 
@@ -18,13 +19,13 @@ cd /scratch/brussel/113/vsc11383/projects/third_sim/FlashElectronSim/build
 export G4FORCENUMBEROFTHREADS=${SLURM_CPUS_PER_TASK}
 
 CSV="../macros/finalgrid.csv"
+#APPLICATOR_CM=10
 # Select applicator ID in cm. Override at submit time, e.g. APPLICATOR_CM=5 sbatch runpossib.slurm
 APPLICATOR_CM="${APPLICATOR_CM:-10}"
 case "${APPLICATOR_CM}" in
   10|5|2) ;;
   *) echo "Invalid APPLICATOR_CM=${APPLICATOR_CM}; allowed values are 10, 5, or 2" >&2; exit 1 ;;
 esac
-
 # -------------------------
 # Human-readable beamOn tag
 # -------------------------
@@ -65,9 +66,12 @@ if [[ -z "${LINE}" ]]; then
   exit 1
 fi
 
-# CSV columns for legacy Gaussian source runs:
+# CSV columns:
 # run_id,beamOn,Emean_MeV,sigmaE_MeV,sigmaTheta_deg,sigma_x_mm,sigma_y_mm
 IFS=',' read -r RUNID BEAMON EMEAN SIGE SIGTH SX SY <<< "${LINE}"
+#IFS=',' read -r RUNID BEAMON <<< "${LINE}"
+
+
 
 # Trim whitespace just in case
 RUNID=$(echo "${RUNID}" | xargs)
@@ -80,16 +84,21 @@ SY=$(echo "${SY}" | xargs)
 
 BEAMTAG=$(format_beamon_tag "${BEAMON}")
 
-echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY} app=${APPLICATOR_CM}cm"
+echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY}"
+
+#echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) TOPAS source app=${APPLICATOR_CM}cm"
 
 # Make a short tag for filenames
-TAG="r${RUNID}_E${EMEAN}_sE${SIGE}_sTh${SIGTH}_${APPLICATOR_CM}cm"
+TAG="r${RUNID}_E${EMEAN}_sE${SIGE}_sTh${SIGTH}"
+#TAG="r${RUNID}_${APPLICATOR_CM}cm_TOPAS"
+
+
 
 # Clean tag: replace '.' with 'p'
 TAG_CLEAN=$(echo "${TAG}" | sed 's/\./p/g')
 
 # -------------------------
-# Generate the legacy Gaussian source macro from CSV parameters.
+# Generate source macro
 # -------------------------
 SRCMAC="src_${TAG_CLEAN}_J${SLURM_JOB_ID}_T${SLURM_ARRAY_TASK_ID}.mac"
 
@@ -100,6 +109,8 @@ sed -e "s/EMEAN/${EMEAN}/g" \
     -e "s/SY/${SY}/g" \
     ../macros/sourcepossib.mac > "${SRCMAC}"
 
+
+#SRCMAC="../macros/source.mac"
 # -------------------------
 # Output files
 # -------------------------
@@ -110,6 +121,8 @@ LAT_MID="latMid_${TAG_CLEAN}_N${BEAMTAG}_J${SLURM_JOB_ID}_T${SLURM_ARRAY_TASK_ID
 
 RUNMAC="$(mktemp run_${TAG_CLEAN}_XXXX.mac)"
 trap 'rm -f "$RUNMAC" "$SRCMAC"' EXIT
+#trap 'rm -f "$RUNMAC"' EXIT
+
 
 # -------------------------
 # Replace placeholders in run template
