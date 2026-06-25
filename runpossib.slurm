@@ -8,6 +8,7 @@
 #SBATCH --array=1-1%1
 #SBATCH --requeue
 
+
 set -euo pipefail
 
 module purge
@@ -68,6 +69,9 @@ fi
 # CSV columns for legacy Gaussian source runs:
 # run_id,beamOn,Emean_MeV,sigmaE_MeV,sigmaTheta_deg,sigma_x_mm,sigma_y_mm
 IFS=',' read -r RUNID BEAMON EMEAN SIGE SIGTH SX SY <<< "${LINE}"
+#IFS=',' read -r RUNID BEAMON <<< "${LINE}"
+
+
 
 # Trim whitespace just in case
 RUNID=$(echo "${RUNID}" | xargs)
@@ -81,6 +85,8 @@ SY=$(echo "${SY}" | xargs)
 BEAMTAG=$(format_beamon_tag "${BEAMON}")
 
 echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) E=${EMEAN} sigE=${SIGE} sigTh=${SIGTH} SX=${SX} SY=${SY} app=${APPLICATOR_CM}cm"
+
+#echo "Task ${SLURM_ARRAY_TASK_ID}: run_id=${RUNID} beamOn=${BEAMON} (${BEAMTAG}) TOPAS source app=${APPLICATOR_CM}cm"
 
 # Make a short tag for filenames
 TAG="r${RUNID}_E${EMEAN}_sE${SIGE}_sTh${SIGTH}_${APPLICATOR_CM}cm"
@@ -100,6 +106,8 @@ sed -e "s/EMEAN/${EMEAN}/g" \
     -e "s/SY/${SY}/g" \
     ../macros/sourcepossib.mac > "${SRCMAC}"
 
+
+#SRCMAC="../macros/source.mac"
 # -------------------------
 # Output files
 # -------------------------
@@ -110,6 +118,8 @@ LAT_MID="latMid_${TAG_CLEAN}_N${BEAMTAG}_J${SLURM_JOB_ID}_T${SLURM_ARRAY_TASK_ID
 
 RUNMAC="$(mktemp run_${TAG_CLEAN}_XXXX.mac)"
 trap 'rm -f "$RUNMAC" "$SRCMAC"' EXIT
+#trap 'rm -f "$RUNMAC"' EXIT
+
 
 # -------------------------
 # Replace placeholders in run template

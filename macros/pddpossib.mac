@@ -16,7 +16,10 @@
 # Optional (requires binary with /flash messenger support):
 #/flash/setApplicatorIDcm 10
 # Optional batch replacement token:
-/flash/setApplicatorIDcm APPLICATOR_CM
+#/flash/setApplicatorIDcm APPLICATOR_CM
+
+# The TOPAS replica contains only the 100 mm applicator STL.
+/flash/setApplicatorIDcm 10
 
 # Init
 /run/initialize
@@ -24,6 +27,7 @@
 # Source (GPS commands require acti ons to be initialized)
 #/control/execute ../macros/sourcepossib.mac
 # Optional batch replacement token:
+# Source (GPS commands require actions to be initialized)
 /control/execute SOURCE_MAC
 
 # -------------------------
@@ -40,6 +44,7 @@
 
 # -------------------------
 # (C) Lateral profile at dmax depth (2D slab)
+# (B) 
 # -------------------------
 /score/create/boxMesh latDmax2D
 /score/mesh/boxSize 75 2.5 0.5 mm
@@ -50,6 +55,7 @@
 
 # -------------------------
 # (D) Lateral profile at R50 depth (2D slab)
+# (C) 
 # -------------------------
 /score/create/boxMesh latR50_2D
 /score/mesh/boxSize 75 2.5 0.5 mm
@@ -60,6 +66,7 @@
 
 # -------------------------
 # (E) Lateral profile at mid-depth (2D slab)
+# (D)
 # -------------------------
 /score/create/boxMesh latMid2D
 /score/mesh/boxSize 75 2.5 0.5 mm
@@ -79,6 +86,8 @@
 /score/dumpQuantityToFile latDmax2D latDmaxDose LAT_DMAX_DOSE_TXT
 /score/dumpQuantityToFile latR50_2D latR50Dose  LAT_R50_DOSE_TXT
 /score/dumpQuantityToFile latMid2D  latMidDose  LAT_MID_DOSE_TXT
+
+
 
 
 
